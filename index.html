@@ -269,6 +269,7 @@
         <option value="weekly">Every week</option>
         <option value="fortnightly">Every fortnight</option>
         <option value="monthly">Every month</option>
+        <option value="yearly">Every year</option>
       </select></div>
     <div class="field" id="untilField" style="visibility:hidden"><label for="fUntil">Until</label>
       <input type="date" id="fUntil"></div>
@@ -573,6 +574,7 @@
     $("evDeleteSeries").hidden = !(e && e.seriesId);
     $("repeatRow").style.display = e ? "none" : "";
     $("fRepeat").value = "none";
+    $("fUntil").value = ""; autoUntil = "";
     $("fTitle").value = e ? e.title : "";
     fillCalSelect(e ? e.calId : (mode === "single" && activeCal ? activeCal : visibleCalIds()[0] || calendars[0].id));
     $("fDate").value = e ? e.date : selected;
@@ -588,13 +590,18 @@
   function syncTimeRow(){ $("timeRow").style.display = $("fAllDay").checked ? "none" : ""; }
   $("fAllDay").addEventListener("change", syncTimeRow);
 
+  var autoUntil = "";
   function syncRepeatRow(){
-    var on = $("fRepeat").value !== "none";
+    var freq = $("fRepeat").value;
+    var on = freq !== "none";
     $("untilField").style.visibility = on ? "visible" : "hidden";
-    if (on && !$("fUntil").value){
+    // Suggest a sensible end date, but never overwrite one the user typed.
+    if (on && (!$("fUntil").value || $("fUntil").value === autoUntil)){
       var d = fromIso($("fDate").value || selected);
-      d.setMonth(d.getMonth() + 6);
-      $("fUntil").value = iso(d);
+      if (freq === "yearly") d.setFullYear(d.getFullYear() + 5);
+      else d.setMonth(d.getMonth() + 6);
+      autoUntil = iso(d);
+      $("fUntil").value = autoUntil;
     }
   }
   $("fRepeat").addEventListener("change", syncRepeatRow);
@@ -603,13 +610,14 @@
   function occurrences(startStr, freq, untilStr){
     var out = [], d = fromIso(startStr), until = fromIso(untilStr);
     var stepDays = {daily:1, weekly:7, fortnightly:14}[freq];
+    var monthStep = freq === "yearly" ? 12 : 1;
     var startDay = d.getDate(), months = 0;
     while (d <= until && out.length < 400){
       out.push(iso(d));
       if (stepDays){
         d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + stepDays);
-      } else { // monthly: same day each month, clamped to the month's length
-        months++;
+      } else { // monthly/yearly: same day each period, clamped to the month's length
+        months += monthStep;
         var base = fromIso(startStr);
         var y = base.getFullYear(), m = base.getMonth() + months;
         var last = new Date(y, m + 1, 0).getDate();
