@@ -1,0 +1,644 @@
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Layers</title>
+<style>
+  :root{
+    --bg:#F6F5F1; --surface:#FFFFFF; --surface2:#EFEDE7;
+    --ink:#22252A; --muted:#6E7480; --line:#E4E2DB;
+    --accent:#2F5D50; --accent-ink:#FFFFFF;
+    --danger:#B3402F;
+    --shadow:0 8px 28px rgba(30,32,36,.16);
+    --c-coral:#E26D5A; --c-marigold:#D99A1F; --c-teal:#2E9E8F; --c-iris:#6C6FC4;
+    --c-rose:#C95D8F; --c-sky:#4A93C9; --c-moss:#7C9A3D; --c-plum:#8E5AA8;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#14161A; --surface:#1D2026; --surface2:#24272E;
+      --ink:#ECEDEE; --muted:#9BA1AB; --line:#2B2F36;
+      --accent:#7FBFAD; --accent-ink:#10201B;
+      --danger:#E07A66;
+      --shadow:0 8px 28px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#14161A; --surface:#1D2026; --surface2:#24272E;
+    --ink:#ECEDEE; --muted:#9BA1AB; --line:#2B2F36;
+    --accent:#7FBFAD; --accent-ink:#10201B;
+    --danger:#E07A66;
+    --shadow:0 8px 28px rgba(0,0,0,.5);
+  }
+  *{box-sizing:border-box; margin:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--ink);
+    font:16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    max-width:520px; margin:0 auto;
+    padding:12px 14px calc(96px + env(safe-area-inset-bottom));
+    -webkit-tap-highlight-color:transparent;
+  }
+  button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{
+    outline:2px solid var(--accent); outline-offset:2px;
+  }
+
+  /* ---------- header ---------- */
+  .top{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 2px 10px}
+  .month-nav{display:flex; align-items:center; gap:2px; min-width:0}
+  h1{
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    font-size:1.55rem; font-weight:600; letter-spacing:.01em; white-space:nowrap;
+  }
+  h1 .yr{color:var(--muted); font-weight:400; margin-left:.35rem}
+  .navbtn{
+    width:38px; height:38px; border-radius:50%; font-size:1.5rem; line-height:1;
+    color:var(--muted); display:grid; place-items:center; flex:none;
+  }
+  .navbtn:active{background:var(--surface2)}
+  .top-actions{display:flex; gap:6px; flex:none}
+  .pillbtn{
+    padding:7px 13px; border-radius:999px; background:var(--surface);
+    border:1px solid var(--line); font-size:.85rem; font-weight:600;
+  }
+  .pillbtn:active{background:var(--surface2)}
+
+  /* ---------- mode toggle ---------- */
+  .seg{
+    display:grid; grid-template-columns:1fr 1fr; gap:3px;
+    background:var(--surface2); border-radius:12px; padding:3px; margin-bottom:10px;
+  }
+  .seg button{
+    padding:8px 4px; border-radius:9px; font-size:.86rem; font-weight:600; color:var(--muted);
+  }
+  .seg button[aria-pressed="true"]{background:var(--surface); color:var(--ink); box-shadow:0 1px 4px rgba(0,0,0,.12)}
+
+  /* ---------- calendar chips ---------- */
+  .chips{display:flex; gap:7px; overflow-x:auto; padding:2px 2px 12px; scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{
+    display:flex; align-items:center; gap:7px; flex:none;
+    padding:6px 12px; border-radius:999px; border:1.5px solid var(--line);
+    background:var(--surface); font-size:.85rem; font-weight:600; color:var(--muted);
+  }
+  .chip .dot{width:10px; height:10px; border-radius:50%; background:var(--cc); opacity:.35}
+  .chip[aria-pressed="true"]{color:var(--ink); border-color:var(--cc)}
+  .chip[aria-pressed="true"] .dot{opacity:1}
+  .chip.ghost{border-style:dashed; color:var(--muted)}
+
+  /* ---------- month grid ---------- */
+  .dow{display:grid; grid-template-columns:repeat(7,1fr); text-align:center;
+    font-size:.68rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--muted); padding-bottom:6px}
+  .grid{display:grid; grid-template-columns:repeat(7,1fr); gap:3px}
+  .cell{
+    aspect-ratio:1/1.15; border-radius:11px; background:var(--surface);
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    padding-top:6px; border:1.5px solid transparent; font-variant-numeric:tabular-nums;
+  }
+  .cell .n{font-size:.86rem; font-weight:600}
+  .cell.out{background:none}
+  .cell.out .n{color:var(--muted); opacity:.55}
+  .cell.today .n{
+    background:var(--accent); color:var(--accent-ink); width:24px; height:24px;
+    border-radius:50%; display:grid; place-items:center;
+  }
+  .cell.sel{border-color:var(--accent)}
+  .dots{display:flex; flex-wrap:wrap; justify-content:center; gap:2.5px; padding:0 3px; max-width:100%}
+  .dots i{width:6px; height:6px; border-radius:50%; background:var(--cc)}
+  .dots .more{font-size:.58rem; font-weight:700; color:var(--muted); line-height:6px}
+
+  /* ---------- day panel ---------- */
+  .daypanel{margin-top:16px}
+  .day-head{display:flex; align-items:baseline; justify-content:space-between; padding:0 2px 8px}
+  .day-head h2{
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    font-size:1.1rem; font-weight:600;
+  }
+  .day-head .cnt{font-size:.8rem; color:var(--muted)}
+  .evlist{display:flex; flex-direction:column; gap:8px}
+  .ev{
+    display:flex; gap:12px; align-items:center; text-align:left; width:100%;
+    background:var(--surface); border-radius:13px; padding:11px 13px;
+    border-left:5px solid var(--cc);
+  }
+  .ev .when{flex:none; width:64px; font-size:.78rem; color:var(--muted);
+    font-variant-numeric:tabular-nums; line-height:1.35}
+  .ev .what{min-width:0}
+  .ev .what b{display:block; font-size:.95rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .ev .what span{font-size:.76rem; color:var(--muted)}
+  .empty{
+    text-align:center; color:var(--muted); font-size:.9rem;
+    padding:26px 16px; background:var(--surface2); border-radius:13px;
+  }
+  .grouphead{display:flex; align-items:center; gap:8px; font-size:.78rem; font-weight:700;
+    color:var(--muted); text-transform:uppercase; letter-spacing:.07em; padding:8px 2px 2px}
+  .grouphead i{width:9px; height:9px; border-radius:50%; background:var(--cc)}
+
+  /* ---------- FAB ---------- */
+  #fab{
+    position:fixed; right:max(18px, calc(50% - 240px)); bottom:calc(20px + env(safe-area-inset-bottom));
+    width:58px; height:58px; border-radius:50%; background:var(--accent); color:var(--accent-ink);
+    font-size:2rem; line-height:1; box-shadow:var(--shadow); display:grid; place-items:center;
+  }
+  #fab:active{transform:scale(.94)}
+
+  /* ---------- sheets ---------- */
+  .scrim{
+    position:fixed; inset:0; background:rgba(15,17,20,.45); opacity:0; pointer-events:none;
+    transition:opacity .2s;
+  }
+  .scrim.on{opacity:1; pointer-events:auto}
+  .sheet{
+    position:fixed; left:50%; bottom:0; transform:translate(-50%,105%);
+    width:min(100%,520px); max-height:88vh; overflow-y:auto;
+    background:var(--surface); border-radius:20px 20px 0 0; box-shadow:var(--shadow);
+    padding:18px 18px calc(24px + env(safe-area-inset-bottom));
+    transition:transform .25s ease;
+  }
+  .sheet.on{transform:translate(-50%,0)}
+  @media (prefers-reduced-motion: reduce){
+    .sheet,.scrim{transition:none}
+  }
+  .sheet h3{
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    font-size:1.2rem; margin-bottom:14px;
+  }
+  .field{margin-bottom:12px}
+  .field label{display:block; font-size:.72rem; font-weight:700; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--muted); margin-bottom:5px}
+  .field input[type=text],.field input[type=date],.field input[type=time],
+  .field select,.field textarea{
+    width:100%; padding:10px 12px; border-radius:10px; border:1.5px solid var(--line);
+    background:var(--bg); color:var(--ink); font:inherit;
+  }
+  .field textarea{resize:vertical; min-height:60px}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .checkline{display:flex; align-items:center; gap:9px; margin-bottom:12px; font-size:.92rem}
+  .checkline input{width:19px; height:19px; accent-color:var(--accent)}
+  .swatches{display:flex; gap:9px; flex-wrap:wrap}
+  .sw{width:34px; height:34px; border-radius:50%; background:var(--cc); border:3px solid transparent}
+  .sw[aria-pressed="true"]{border-color:var(--ink)}
+  .sheet-actions{display:flex; gap:9px; margin-top:16px}
+  .btn{
+    flex:1; padding:12px; border-radius:12px; font-weight:700; font-size:.95rem; text-align:center;
+  }
+  .btn.primary{background:var(--accent); color:var(--accent-ink)}
+  .btn.quiet{background:var(--surface2)}
+  .btn.danger{background:none; color:var(--danger); flex:0 0 auto; padding:12px 14px}
+
+  /* calendar manager rows */
+  .calrow{
+    display:flex; align-items:center; gap:12px; width:100%; text-align:left;
+    padding:12px 6px; border-bottom:1px solid var(--line);
+  }
+  .calrow:last-of-type{border-bottom:0}
+  .calrow .dot{width:14px; height:14px; border-radius:50%; background:var(--cc); flex:none}
+  .calrow b{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .calrow span{font-size:.78rem; color:var(--muted); flex:none}
+  .note{font-size:.8rem; color:var(--muted); margin-top:10px; text-align:center}
+</style>
+
+<header class="top">
+  <div class="month-nav">
+    <button class="navbtn" id="prevBtn" aria-label="Previous month">‹</button>
+    <h1><span id="mTitle"></span><span class="yr" id="mYear"></span></h1>
+    <button class="navbtn" id="nextBtn" aria-label="Next month">›</button>
+  </div>
+  <div class="top-actions">
+    <button class="pillbtn" id="todayBtn">Today</button>
+    <button class="pillbtn" id="manageBtn">Calendars</button>
+  </div>
+</header>
+
+<div class="seg" role="group" aria-label="View mode">
+  <button id="modeOverlay" aria-pressed="true">All together</button>
+  <button id="modeSingle" aria-pressed="false">One at a time</button>
+</div>
+
+<div class="chips" id="chips"></div>
+
+<div class="dow">
+  <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+</div>
+<div class="grid" id="grid"></div>
+
+<section class="daypanel">
+  <div class="day-head">
+    <h2 id="dayTitle"></h2>
+    <span class="cnt" id="dayCount"></span>
+  </div>
+  <div class="evlist" id="dayList"></div>
+</section>
+
+<button id="fab" aria-label="Add event">+</button>
+
+<div class="scrim" id="scrim"></div>
+
+<!-- event editor -->
+<div class="sheet" id="evSheet" role="dialog" aria-modal="true" aria-labelledby="evTitleH">
+  <h3 id="evTitleH">New event</h3>
+  <div class="field"><label for="fTitle">Title</label>
+    <input type="text" id="fTitle" placeholder="What's happening?" autocomplete="off"></div>
+  <div class="field"><label for="fCal">Calendar</label>
+    <select id="fCal"></select></div>
+  <div class="field"><label for="fDate">Date</label>
+    <input type="date" id="fDate"></div>
+  <label class="checkline"><input type="checkbox" id="fAllDay"> All day</label>
+  <div class="row2" id="timeRow">
+    <div class="field"><label for="fStart">Starts</label><input type="time" id="fStart"></div>
+    <div class="field"><label for="fEnd">Ends</label><input type="time" id="fEnd"></div>
+  </div>
+  <div class="field"><label for="fNotes">Notes</label>
+    <textarea id="fNotes" placeholder="Optional"></textarea></div>
+  <div class="sheet-actions">
+    <button class="btn danger" id="evDelete" hidden>Delete</button>
+    <button class="btn quiet" id="evCancel">Cancel</button>
+    <button class="btn primary" id="evSave">Save</button>
+  </div>
+</div>
+
+<!-- calendar manager -->
+<div class="sheet" id="calSheet" role="dialog" aria-modal="true" aria-labelledby="calTitleH">
+  <h3 id="calTitleH">Your calendars</h3>
+  <div id="calList"></div>
+  <div class="sheet-actions">
+    <button class="btn quiet" id="calClose">Done</button>
+    <button class="btn primary" id="calNew">New calendar</button>
+  </div>
+</div>
+
+<!-- calendar editor -->
+<div class="sheet" id="calEdit" role="dialog" aria-modal="true" aria-labelledby="calEditH">
+  <h3 id="calEditH">New calendar</h3>
+  <div class="field"><label for="cName">Name</label>
+    <input type="text" id="cName" placeholder="e.g. Court dates" autocomplete="off"></div>
+  <div class="field"><label>Colour</label>
+    <div class="swatches" id="swatches"></div></div>
+  <div class="sheet-actions">
+    <button class="btn danger" id="cDelete" hidden>Delete</button>
+    <button class="btn quiet" id="cCancel">Cancel</button>
+    <button class="btn primary" id="cSave">Save</button>
+  </div>
+  <p class="note" id="cDelNote" hidden>Deleting a calendar also deletes its events.</p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var COLORS = ["#E26D5A","#D99A1F","#2E9E8F","#6C6FC4","#C95D8F","#4A93C9","#7C9A3D","#8E5AA8"];
+  var KEY = "layers-calendar-v1";
+
+  // ---- storage (fall back to memory if localStorage is blocked) ----
+  var mem = null;
+  function load(){
+    try{ var raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : null; }
+    catch(e){ return mem; }
+  }
+  function save(){
+    var data = {calendars:calendars, events:events, mode:mode, hidden:hidden, activeCal:activeCal};
+    try{ localStorage.setItem(KEY, JSON.stringify(data)); }
+    catch(e){ mem = data; }
+  }
+
+  // ---- state ----
+  var calendars, events, mode, hidden, activeCal;
+  var saved = load();
+  if (saved && saved.calendars){
+    calendars = saved.calendars; events = saved.events || [];
+    mode = saved.mode || "overlay"; hidden = saved.hidden || {};
+    activeCal = saved.activeCal || (calendars[0] && calendars[0].id);
+  } else {
+    calendars = [
+      {id:"c1", name:"Work", color:"#2E9E8F"},
+      {id:"c2", name:"Personal", color:"#E26D5A"}
+    ];
+    events = []; mode = "overlay"; hidden = {}; activeCal = "c1";
+    save();
+  }
+
+  var today = new Date();
+  var cur = {y: today.getFullYear(), m: today.getMonth()};
+  var selected = iso(today);
+  var editingEvent = null, editingCal = null, pickedColor = COLORS[0];
+
+  // ---- helpers ----
+  function iso(d){
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+  function fromIso(s){ var p = s.split("-"); return new Date(+p[0], +p[1]-1, +p[2]); }
+  function uid(){ return "id" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+  function calById(id){ for (var i=0;i<calendars.length;i++) if (calendars[i].id===id) return calendars[i]; return null; }
+  function fmtTime(t){
+    if (!t) return "";
+    var h = +t.slice(0,2), m = t.slice(3,5);
+    var ap = h < 12 ? "am" : "pm"; h = h % 12 || 12;
+    return h + (m==="00" ? "" : ":"+m) + ap;
+  }
+  function visibleCalIds(){
+    if (mode === "single") return activeCal && calById(activeCal) ? [activeCal] : [];
+    return calendars.filter(function(c){ return !hidden[c.id]; }).map(function(c){ return c.id; });
+  }
+  function eventsOn(dateStr, calIds){
+    return events.filter(function(e){
+      return e.date === dateStr && calIds.indexOf(e.calId) !== -1;
+    }).sort(function(a,b){
+      if (a.allDay !== b.allDay) return a.allDay ? -1 : 1;
+      return (a.start||"").localeCompare(b.start||"");
+    });
+  }
+  var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  var DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+
+  // ---- render: header + chips ----
+  var $ = function(id){ return document.getElementById(id); };
+
+  function renderAll(){ renderHeader(); renderChips(); renderGrid(); renderDay(); }
+
+  function renderHeader(){
+    $("mTitle").textContent = MONTHS[cur.m];
+    $("mYear").textContent = cur.y;
+    $("modeOverlay").setAttribute("aria-pressed", mode === "overlay");
+    $("modeSingle").setAttribute("aria-pressed", mode === "single");
+  }
+
+  function renderChips(){
+    var box = $("chips"); box.innerHTML = "";
+    calendars.forEach(function(c){
+      var b = document.createElement("button");
+      b.className = "chip"; b.style.setProperty("--cc", c.color);
+      var on = mode === "single" ? (activeCal === c.id) : !hidden[c.id];
+      b.setAttribute("aria-pressed", on);
+      b.innerHTML = '<span class="dot"></span>';
+      b.appendChild(document.createTextNode(c.name));
+      b.addEventListener("click", function(){
+        if (mode === "single"){ activeCal = c.id; }
+        else { hidden[c.id] = !hidden[c.id]; }
+        save(); renderAll();
+      });
+      box.appendChild(b);
+    });
+    var add = document.createElement("button");
+    add.className = "chip ghost"; add.textContent = "+ Add";
+    add.addEventListener("click", function(){ openCalEdit(null); });
+    box.appendChild(add);
+  }
+
+  // ---- render: month grid ----
+  function renderGrid(){
+    var grid = $("grid"); grid.innerHTML = "";
+    var calIds = visibleCalIds();
+    var first = new Date(cur.y, cur.m, 1);
+    var lead = (first.getDay() + 6) % 7; // Monday start
+    var start = new Date(cur.y, cur.m, 1 - lead);
+    var todayStr = iso(new Date());
+    for (var i = 0; i < 42; i++){
+      var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      if (i === 35 && d.getMonth() !== cur.m) break; // skip empty 6th row
+      var ds = iso(d);
+      var cell = document.createElement("button");
+      cell.className = "cell";
+      if (d.getMonth() !== cur.m) cell.className += " out";
+      if (ds === todayStr) cell.className += " today";
+      if (ds === selected) cell.className += " sel";
+      var n = document.createElement("span"); n.className = "n"; n.textContent = d.getDate();
+      cell.appendChild(n);
+      var evs = eventsOn(ds, calIds);
+      if (evs.length){
+        var dots = document.createElement("span"); dots.className = "dots";
+        evs.slice(0,4).forEach(function(e){
+          var c = calById(e.calId);
+          var dot = document.createElement("i");
+          dot.style.setProperty("--cc", c ? c.color : "#999");
+          dots.appendChild(dot);
+        });
+        if (evs.length > 4){
+          var more = document.createElement("span"); more.className = "more";
+          more.textContent = "+" + (evs.length - 4);
+          dots.appendChild(more);
+        }
+        cell.appendChild(dots);
+      }
+      (function(ds, d){
+        cell.addEventListener("click", function(){
+          selected = ds;
+          if (d.getMonth() !== cur.m){ cur = {y:d.getFullYear(), m:d.getMonth()}; }
+          renderAll();
+        });
+      })(ds, d);
+      grid.appendChild(cell);
+    }
+  }
+
+  // ---- render: day panel ----
+  function renderDay(){
+    var d = fromIso(selected);
+    $("dayTitle").textContent = DAYS[d.getDay()] + " " + d.getDate() + " " + MONTHS[d.getMonth()];
+    var calIds = visibleCalIds();
+    var list = $("dayList"); list.innerHTML = "";
+
+    if (!calendars.length){
+      $("dayCount").textContent = "";
+      var em = document.createElement("div"); em.className = "empty";
+      em.textContent = "Add a calendar to get started — tap “Calendars” above.";
+      list.appendChild(em);
+      return;
+    }
+
+    var evs = eventsOn(selected, calIds);
+    $("dayCount").textContent = evs.length ? evs.length + (evs.length === 1 ? " event" : " events") : "";
+    if (!evs.length){
+      var em2 = document.createElement("div"); em2.className = "empty";
+      em2.textContent = mode === "single"
+        ? "Nothing on this calendar today. Tap + to add something."
+        : "Nothing on today. Tap + to add something.";
+      list.appendChild(em2);
+      return;
+    }
+    evs.forEach(function(e){
+      var c = calById(e.calId);
+      var b = document.createElement("button");
+      b.className = "ev"; b.style.setProperty("--cc", c ? c.color : "#999");
+      var when = document.createElement("span"); when.className = "when";
+      when.innerHTML = e.allDay ? "All day" : fmtTime(e.start) + (e.end ? "<br>" + fmtTime(e.end) : "");
+      var what = document.createElement("span"); what.className = "what";
+      var t = document.createElement("b"); t.textContent = e.title;
+      what.appendChild(t);
+      var sub = document.createElement("span");
+      sub.textContent = (c ? c.name : "") + (e.notes ? " · " + e.notes : "");
+      what.appendChild(sub);
+      b.appendChild(when); b.appendChild(what);
+      b.addEventListener("click", function(){ openEvent(e); });
+      list.appendChild(b);
+    });
+  }
+
+  // ---- sheets ----
+  function openSheet(id){
+    $("scrim").classList.add("on");
+    $(id).classList.add("on");
+  }
+  function closeSheets(){
+    $("scrim").classList.remove("on");
+    ["evSheet","calSheet","calEdit"].forEach(function(id){ $(id).classList.remove("on"); });
+  }
+  $("scrim").addEventListener("click", closeSheets);
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape") closeSheets(); });
+
+  // ---- event editor ----
+  function fillCalSelect(sel){
+    var s = $("fCal"); s.innerHTML = "";
+    calendars.forEach(function(c){
+      var o = document.createElement("option");
+      o.value = c.id; o.textContent = c.name;
+      s.appendChild(o);
+    });
+    if (sel) s.value = sel;
+  }
+  function openEvent(e){
+    if (!calendars.length){ openCalEdit(null); return; }
+    editingEvent = e;
+    $("evTitleH").textContent = e ? "Edit event" : "New event";
+    $("evDelete").hidden = !e;
+    $("fTitle").value = e ? e.title : "";
+    fillCalSelect(e ? e.calId : (mode === "single" && activeCal ? activeCal : visibleCalIds()[0] || calendars[0].id));
+    $("fDate").value = e ? e.date : selected;
+    $("fAllDay").checked = e ? !!e.allDay : false;
+    $("fStart").value = e ? (e.start || "") : "09:00";
+    $("fEnd").value = e ? (e.end || "") : "";
+    $("fNotes").value = e ? (e.notes || "") : "";
+    syncTimeRow();
+    openSheet("evSheet");
+    if (!e) setTimeout(function(){ $("fTitle").focus(); }, 260);
+  }
+  function syncTimeRow(){ $("timeRow").style.display = $("fAllDay").checked ? "none" : ""; }
+  $("fAllDay").addEventListener("change", syncTimeRow);
+
+  $("evSave").addEventListener("click", function(){
+    var title = $("fTitle").value.trim() || "Untitled";
+    var date = $("fDate").value || selected;
+    var allDay = $("fAllDay").checked;
+    var data = {
+      title: title, calId: $("fCal").value, date: date, allDay: allDay,
+      start: allDay ? "" : $("fStart").value,
+      end: allDay ? "" : $("fEnd").value,
+      notes: $("fNotes").value.trim()
+    };
+    if (editingEvent){
+      for (var k in data) editingEvent[k] = data[k];
+    } else {
+      data.id = uid();
+      events.push(data);
+    }
+    selected = date;
+    var d = fromIso(date); cur = {y:d.getFullYear(), m:d.getMonth()};
+    save(); closeSheets(); renderAll();
+  });
+  $("evDelete").addEventListener("click", function(){
+    if (!editingEvent) return;
+    events = events.filter(function(e){ return e.id !== editingEvent.id; });
+    save(); closeSheets(); renderAll();
+  });
+  $("evCancel").addEventListener("click", closeSheets);
+  $("fab").addEventListener("click", function(){ openEvent(null); });
+
+  // ---- calendar manager ----
+  function renderCalList(){
+    var box = $("calList"); box.innerHTML = "";
+    if (!calendars.length){
+      var em = document.createElement("div"); em.className = "empty";
+      em.textContent = "No calendars yet.";
+      box.appendChild(em);
+      return;
+    }
+    calendars.forEach(function(c){
+      var n = events.filter(function(e){ return e.calId === c.id; }).length;
+      var row = document.createElement("button");
+      row.className = "calrow"; row.style.setProperty("--cc", c.color);
+      var dot = document.createElement("span"); dot.className = "dot";
+      var name = document.createElement("b"); name.textContent = c.name;
+      var cnt = document.createElement("span");
+      cnt.textContent = n + (n === 1 ? " event" : " events");
+      row.appendChild(dot); row.appendChild(name); row.appendChild(cnt);
+      row.addEventListener("click", function(){ openCalEdit(c); });
+      box.appendChild(row);
+    });
+  }
+  $("manageBtn").addEventListener("click", function(){ renderCalList(); openSheet("calSheet"); });
+  $("calClose").addEventListener("click", closeSheets);
+  $("calNew").addEventListener("click", function(){ openCalEdit(null); });
+
+  // ---- calendar editor ----
+  function renderSwatches(){
+    var box = $("swatches"); box.innerHTML = "";
+    COLORS.forEach(function(col){
+      var b = document.createElement("button");
+      b.className = "sw"; b.style.setProperty("--cc", col);
+      b.setAttribute("aria-label", "Colour " + col);
+      b.setAttribute("aria-pressed", pickedColor === col);
+      b.addEventListener("click", function(){
+        pickedColor = col; renderSwatches();
+      });
+      box.appendChild(b);
+    });
+  }
+  function openCalEdit(c){
+    closeSheets();
+    editingCal = c;
+    $("calEditH").textContent = c ? "Edit calendar" : "New calendar";
+    $("cName").value = c ? c.name : "";
+    pickedColor = c ? c.color : COLORS[calendars.length % COLORS.length];
+    $("cDelete").hidden = !c;
+    $("cDelNote").hidden = !c;
+    renderSwatches();
+    openSheet("calEdit");
+    if (!c) setTimeout(function(){ $("cName").focus(); }, 260);
+  }
+  $("cSave").addEventListener("click", function(){
+    var name = $("cName").value.trim();
+    if (!name){ $("cName").focus(); return; }
+    if (editingCal){
+      editingCal.name = name; editingCal.color = pickedColor;
+    } else {
+      var c = {id: uid(), name: name, color: pickedColor};
+      calendars.push(c);
+      if (mode === "single") activeCal = c.id;
+    }
+    if (!activeCal || !calById(activeCal)) activeCal = calendars[0] && calendars[0].id;
+    save(); closeSheets(); renderAll();
+  });
+  $("cDelete").addEventListener("click", function(){
+    if (!editingCal) return;
+    var n = events.filter(function(e){ return e.calId === editingCal.id; }).length;
+    var msg = 'Delete “' + editingCal.name + '”' + (n ? " and its " + n + (n === 1 ? " event" : " events") : "") + "?";
+    if (!confirm(msg)) return;
+    events = events.filter(function(e){ return e.calId !== editingCal.id; });
+    calendars = calendars.filter(function(c){ return c.id !== editingCal.id; });
+    delete hidden[editingCal.id];
+    if (activeCal === editingCal.id) activeCal = calendars[0] && calendars[0].id;
+    save(); closeSheets(); renderAll();
+  });
+  $("cCancel").addEventListener("click", closeSheets);
+
+  // ---- nav + mode ----
+  $("prevBtn").addEventListener("click", function(){
+    cur.m--; if (cur.m < 0){ cur.m = 11; cur.y--; } renderAll();
+  });
+  $("nextBtn").addEventListener("click", function(){
+    cur.m++; if (cur.m > 11){ cur.m = 0; cur.y++; } renderAll();
+  });
+  $("todayBtn").addEventListener("click", function(){
+    var t = new Date();
+    cur = {y: t.getFullYear(), m: t.getMonth()};
+    selected = iso(t);
+    renderAll();
+  });
+  $("modeOverlay").addEventListener("click", function(){
+    mode = "overlay"; save(); renderAll();
+  });
+  $("modeSingle").addEventListener("click", function(){
+    mode = "single";
+    if (!activeCal || !calById(activeCal)) activeCal = calendars[0] && calendars[0].id;
+    save(); renderAll();
+  });
+
+  renderAll();
+})();
+</script>
