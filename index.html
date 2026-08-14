@@ -102,21 +102,27 @@
     color:var(--muted); padding-bottom:6px}
   .grid{display:grid; grid-template-columns:repeat(7,1fr); gap:3px}
   .cell{
-    aspect-ratio:1/1.15; border-radius:11px; background:var(--surface);
-    display:flex; flex-direction:column; align-items:center; gap:3px;
-    padding-top:6px; border:1.5px solid transparent; font-variant-numeric:tabular-nums;
+    min-height:70px; border-radius:10px; background:var(--surface);
+    display:flex; flex-direction:column; gap:2px; overflow:hidden;
+    padding:4px 2px 3px; border:1.5px solid transparent; font-variant-numeric:tabular-nums;
   }
-  .cell .n{font-size:.86rem; font-weight:600}
+  .cell .n{font-size:.78rem; font-weight:600; text-align:center; line-height:1.3; flex:none}
   .cell.out{background:none}
   .cell.out .n{color:var(--muted); opacity:.55}
+  .cell.out .mev{opacity:.55}
   .cell.today .n{
-    background:var(--accent); color:var(--accent-ink); width:24px; height:24px;
-    border-radius:50%; display:grid; place-items:center;
+    background:var(--accent); color:var(--accent-ink); width:21px; height:21px;
+    border-radius:50%; display:grid; place-items:center; margin:0 auto; font-size:.72rem;
   }
   .cell.sel{border-color:var(--accent)}
-  .dots{display:flex; flex-wrap:wrap; justify-content:center; gap:2.5px; padding:0 3px; max-width:100%}
-  .dots i{width:6px; height:6px; border-radius:50%; background:var(--cc)}
-  .dots .more{font-size:.58rem; font-weight:700; color:var(--muted); line-height:6px}
+  .mevs{display:flex; flex-direction:column; gap:2px; overflow:hidden; min-height:0}
+  .mev{
+    font-size:.56rem; font-weight:600; line-height:1.55; text-align:left;
+    background:color-mix(in srgb, var(--cc) 26%, transparent);
+    border-left:2.5px solid var(--cc); border-radius:3.5px;
+    padding:0 2px 0 3px; white-space:nowrap; overflow:hidden; flex:none;
+  }
+  .mev.more{background:none; border:0; color:var(--muted); font-weight:700; text-align:center}
 
   /* ---------- day panel ---------- */
   .daypanel{margin-top:16px}
@@ -254,8 +260,12 @@
     <input type="text" id="fTitle" placeholder="What's happening?" autocomplete="off"></div>
   <div class="field"><label for="fCal">Calendar</label>
     <select id="fCal"></select></div>
-  <div class="field"><label for="fDate">Date</label>
-    <input type="date" id="fDate"></div>
+  <div class="row2">
+    <div class="field"><label for="fDate">Date</label>
+      <input type="date" id="fDate"></div>
+    <div class="field"><label for="fEndDate">Last day (optional)</label>
+      <input type="date" id="fEndDate"></div>
+  </div>
   <label class="checkline"><input type="checkbox" id="fAllDay"> All day</label>
   <div class="row2" id="timeRow">
     <div class="field"><label for="fStart">Starts</label><input type="time" id="fStart"></div>
@@ -408,12 +418,20 @@
     return calendars.filter(function(c){ return !hidden[c.id]; }).map(function(c){ return c.id; });
   }
   function eventsOn(dateStr, calIds){
+    function key(e){
+      // all-day events and the middle/end days of a multi-day span sort first
+      var early = e.allDay || (e.endDate && e.endDate > e.date && e.date !== dateStr);
+      return (early ? "0" : "1") + (e.start || "");
+    }
     return events.filter(function(e){
-      return e.date === dateStr && calIds.indexOf(e.calId) !== -1;
-    }).sort(function(a,b){
-      if (a.allDay !== b.allDay) return a.allDay ? -1 : 1;
-      return (a.start||"").localeCompare(b.start||"");
-    });
+      if (calIds.indexOf(e.calId) === -1) return false;
+      if (e.endDate && e.endDate > e.date) return e.date <= dateStr && dateStr <= e.endDate;
+      return e.date === dateStr;
+    }).sort(function(a,b){ return key(a).localeCompare(key(b)); });
+  }
+  function miniDate(ds){
+    var d = fromIso(ds);
+    return d.getDate() + " " + MONTHS[d.getMonth()].slice(0,3);
   }
   var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   var DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -473,19 +491,21 @@
       cell.appendChild(n);
       var evs = eventsOn(ds, calIds);
       if (evs.length){
-        var dots = document.createElement("span"); dots.className = "dots";
-        evs.slice(0,4).forEach(function(e){
+        var box = document.createElement("span"); box.className = "mevs";
+        var shown = evs.length > 3 ? 2 : evs.length;
+        evs.slice(0, shown).forEach(function(e){
           var c = calById(e.calId);
-          var dot = document.createElement("i");
-          dot.style.setProperty("--cc", c ? c.color : "#999");
-          dots.appendChild(dot);
+          var chip = document.createElement("span"); chip.className = "mev";
+          chip.style.setProperty("--cc", c ? c.color : "#999");
+          chip.textContent = e.title;
+          box.appendChild(chip);
         });
-        if (evs.length > 4){
-          var more = document.createElement("span"); more.className = "more";
-          more.textContent = "+" + (evs.length - 4);
-          dots.appendChild(more);
+        if (evs.length > shown){
+          var more = document.createElement("span"); more.className = "mev more";
+          more.textContent = "+" + (evs.length - shown);
+          box.appendChild(more);
         }
-        cell.appendChild(dots);
+        cell.appendChild(box);
       }
       (function(ds, d){
         cell.addEventListener("click", function(){
@@ -528,7 +548,11 @@
       var b = document.createElement("button");
       b.className = "ev"; b.style.setProperty("--cc", c ? c.color : "#999");
       var when = document.createElement("span"); when.className = "when";
-      when.innerHTML = e.allDay ? "All day" : fmtTime(e.start) + (e.end ? "<br>" + fmtTime(e.end) : "");
+      if (e.endDate && e.endDate > e.date){
+        when.textContent = miniDate(e.date) + " – " + miniDate(e.endDate);
+      } else {
+        when.innerHTML = e.allDay ? "All day" : fmtTime(e.start) + (e.end ? "<br>" + fmtTime(e.end) : "");
+      }
       var what = document.createElement("span"); what.className = "what";
       var t = document.createElement("b"); t.textContent = e.title;
       what.appendChild(t);
@@ -578,6 +602,7 @@
     $("fTitle").value = e ? e.title : "";
     fillCalSelect(e ? e.calId : (mode === "single" && activeCal ? activeCal : visibleCalIds()[0] || calendars[0].id));
     $("fDate").value = e ? e.date : selected;
+    $("fEndDate").value = e ? (e.endDate || "") : "";
     $("fAllDay").checked = e ? !!e.allDay : false;
     $("fStart").value = e ? (e.start || "") : "09:00";
     $("fEnd").value = e ? (e.end || "") : "";
@@ -630,9 +655,11 @@
   $("evSave").addEventListener("click", function(){
     var title = $("fTitle").value.trim() || "Untitled";
     var date = $("fDate").value || selected;
+    var endDate = $("fEndDate").value;
+    if (endDate && endDate <= date) endDate = "";
     var allDay = $("fAllDay").checked;
     var data = {
-      title: title, calId: $("fCal").value, date: date, allDay: allDay,
+      title: title, calId: $("fCal").value, date: date, endDate: endDate, allDay: allDay,
       start: allDay ? "" : $("fStart").value,
       end: allDay ? "" : $("fEnd").value,
       remind: $("fRemind").value,
@@ -645,9 +672,14 @@
       if (freq !== "none"){
         var until = $("fUntil").value || date;
         var sid = uid();
+        var span = endDate ? Math.round((fromIso(endDate) - fromIso(date)) / 86400000) : 0;
         occurrences(date, freq, until).forEach(function(ds){
           var copy = {}; for (var k2 in data) copy[k2] = data[k2];
           copy.id = uid(); copy.date = ds; copy.seriesId = sid;
+          if (span){
+            var ed = fromIso(ds); ed.setDate(ed.getDate() + span);
+            copy.endDate = iso(ed);
+          }
           events.push(copy);
         });
       } else {
