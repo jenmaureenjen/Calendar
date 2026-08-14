@@ -54,15 +54,16 @@
   }
 
   /* ---------- header ---------- */
-  .top{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 2px 10px}
-  .month-nav{display:flex; align-items:center; gap:2px; min-width:0}
+  .top{display:flex; align-items:center; justify-content:space-between; gap:6px; padding:6px 0 10px}
+  .month-nav{display:flex; align-items:center; gap:0; min-width:0; flex:1}
   h1{
     font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
-    font-size:1.55rem; font-weight:600; letter-spacing:.01em; white-space:nowrap;
+    font-size:clamp(1.02rem, 4.6vw, 1.5rem); font-weight:600; letter-spacing:.01em;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;
   }
   h1 .yr{color:var(--muted); font-weight:400; margin-left:.35rem}
   .navbtn{
-    width:38px; height:38px; border-radius:50%; font-size:1.5rem; line-height:1;
+    width:42px; height:42px; border-radius:50%; font-size:1.6rem; line-height:1;
     color:var(--muted); display:grid; place-items:center; flex:none;
   }
   .navbtn:active{background:var(--surface2)}
@@ -444,6 +445,10 @@
   function renderHeader(){
     $("mTitle").textContent = MONTHS[cur.m];
     $("mYear").textContent = cur.y;
+    var h1 = $("mTitle").parentNode;
+    if (h1.scrollWidth > h1.clientWidth + 1){
+      $("mTitle").textContent = MONTHS[cur.m].slice(0, 3);
+    }
     $("modeOverlay").setAttribute("aria-pressed", mode === "overlay");
     $("modeSingle").setAttribute("aria-pressed", mode === "single");
   }
@@ -787,12 +792,25 @@
   $("cCancel").addEventListener("click", closeSheets);
 
   // ---- nav + mode ----
-  $("prevBtn").addEventListener("click", function(){
-    cur.m--; if (cur.m < 0){ cur.m = 11; cur.y--; } renderAll();
-  });
-  $("nextBtn").addEventListener("click", function(){
-    cur.m++; if (cur.m > 11){ cur.m = 0; cur.y++; } renderAll();
-  });
+  function prevMonth(){ cur.m--; if (cur.m < 0){ cur.m = 11; cur.y--; } renderAll(); }
+  function nextMonth(){ cur.m++; if (cur.m > 11){ cur.m = 0; cur.y++; } renderAll(); }
+  $("prevBtn").addEventListener("click", prevMonth);
+  $("nextBtn").addEventListener("click", nextMonth);
+
+  // swipe left/right anywhere on the month grid to change month
+  var swipe = null;
+  $("grid").addEventListener("touchstart", function(e){
+    if (e.touches.length === 1) swipe = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+  }, {passive: true});
+  $("grid").addEventListener("touchend", function(e){
+    if (!swipe) return;
+    var dx = e.changedTouches[0].clientX - swipe.x;
+    var dy = e.changedTouches[0].clientY - swipe.y;
+    swipe = null;
+    if (Math.abs(dx) > 48 && Math.abs(dx) > 1.5 * Math.abs(dy)){
+      if (dx < 0) nextMonth(); else prevMonth();
+    }
+  }, {passive: true});
   $("todayBtn").addEventListener("click", function(){
     var t = new Date();
     cur = {y: t.getFullYear(), m: t.getMonth()};
